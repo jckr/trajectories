@@ -1,45 +1,66 @@
+'use strict';
+var d3 = require('d3');
+var mountNode = document.getElementById('app');
+var r = require('r-dom');
+var React = window.React = require('react');
+var ReactDOM = require('react-dom');
+var constants = require('./components/constants');
+var Utils = require('./components/utils');
+var Map  = require('./components/map');
 
-var React = window.React = require('react'),
-    ReactDOM = require("react-dom"),
-    Timer = require("./ui/Timer"),
-    mountNode = document.getElementById("app");
 
-var TodoList = React.createClass({
-  render: function() {
-    var createItem = function(itemText) {
-      return <li>{itemText}</li>;
-    };
-    return <ul>{this.props.items.map(createItem)}</ul>;
-  }
-});
-var TodoApp = React.createClass({
+
+var App = React.createClass({
+  componentDidMount: function() {
+    var state = this.state;
+    this._loadData(constants.CITIES[state.city]);  
+  },
+  _loadData: function loadData(city) {
+    console.log('in load data');
+    var promises = [city.nodes, city.streets, city.paths].map(Utils.loadCsv);
+    Promise.all(promises).then(function resolvePromises(dataArray) {
+      var rawNodes = dataArray[0];
+      var streets = dataArray[1];
+      var paths = dataArray[2];
+      
+      console.log('state updated');
+      var preparedEdges = Utils.prepareEdges({
+        nodes: rawNodes,
+        paths,
+        width: constants.SETTINGS.WIDTH,
+        height: constants.SETTINGS.HEIGHT,
+        zoom: constants.SETTINGS.ZOOM
+      });
+      //console.log(Utils.dijkstra({nodes: preparedEdges.nodes, edges: preparedEdges.edges.edgesHash, source: 0}));
+      this.setState({
+        edges: preparedEdges.edges,
+        nodes: preparedEdges.nodes,
+        paths,
+        projection: preparedEdges.projection
+        voronoi: preparedEdges.voronoi
+      });
+    }.bind(this));
+  },
   getInitialState: function() {
-    return {items: [], text: ''};
-  },
-  onChange: function(e) {
-    this.setState({text: e.target.value});
-  },
-  handleSubmit: function(e) {
-    e.preventDefault();
-    var nextItems = this.state.items.concat([this.state.text]);
-    var nextText = '';
-    this.setState({items: nextItems, text: nextText});
+    return {
+      city: "Paris"
+    };
   },
   render: function() {
-    return (
-      <div>
-        <h3>TODO</h3>
-        <TodoList items={this.state.items} />
-        <form onSubmit={this.handleSubmit}>
-          <input onChange={this.onChange} value={this.state.text} />
-          <button>{'Add #' + (this.state.items.length + 1)}</button>
-        </form>
-        <Timer />
-      </div>
-    );
+    var state = this.state;
+    return (state && state.edges) ?
+      r(Map, {
+        edges: state.edges,
+        height: constants.SETTINGS.HEIGHT,
+        mountNode,
+        nodes: state.nodes,
+        projection: state.projection,
+        rendering: constants.SETTINGS.RENDERING,
+        width: constants.SETTINGS.WIDTH,
+        zoom: constants.SETTINGS.ZOOM
+      }) : r.div('loading...');
   }
 });
 
-
-ReactDOM.render(<TodoApp />, mountNode);
+ReactDOM.render(r(App), mountNode);
 
