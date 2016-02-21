@@ -1,53 +1,47 @@
-'use strict';
-var d3 = require('d3');
-var mountNode = document.getElementById('app');
-var r = require('r-dom');
-var React = window.React = require('react');
-var ReactDOM = require('react-dom');
-var constants = require('./components/constants');
-var Utils = require('./components/utils');
-var Map  = require('./components/map');
+const document = require('global/document');
+const mountNode = document.getElementById('app');
+const r = require('r-dom');
+const React = require('react');
+const ReactDOM = require('react-dom');
+const constants = require('./components/constants');
+const Utils = require('./components/utils');
+const Map = require('./components/map');
 
-
-
-var App = React.createClass({
-  componentDidMount: function() {
-    var state = this.state;
-    this._loadData(constants.CITIES[state.city]);  
+const App = React.createClass({
+  componentDidMount: function cdm() {
+    const state = this.state;
+    this._loadData(constants.CITIES[state.city]);
   },
   _loadData: function loadData(city) {
-    console.log('in load data');
-    var promises = [city.nodes, city.streets, city.paths].map(Utils.loadCsv);
+    const promises = [city.nodes, city.paths].map(Utils.loadCsv);
     Promise.all(promises).then(function resolvePromises(dataArray) {
-      var rawNodes = dataArray[0];
-      var streets = dataArray[1];
-      var paths = dataArray[2];
-      
-      console.log('state updated');
-      var preparedEdges = Utils.prepareEdges({
+      const rawNodes = dataArray[0];
+      const paths = dataArray[1];
+
+      const preparedEdges = Utils.prepareEdges({
         nodes: rawNodes,
         paths,
         width: constants.SETTINGS.WIDTH,
         height: constants.SETTINGS.HEIGHT,
         zoom: constants.SETTINGS.ZOOM
       });
-      //console.log(Utils.dijkstra({nodes: preparedEdges.nodes, edges: preparedEdges.edges.edgesHash, source: 0}));
+
       this.setState({
         edges: preparedEdges.edges,
         nodes: preparedEdges.nodes,
         paths,
-        projection: preparedEdges.projection
+        projection: preparedEdges.projection,
         voronoi: preparedEdges.voronoi
       });
     }.bind(this));
   },
-  getInitialState: function() {
+  getInitialState: function getInitialState() {
     return {
-      city: "Paris"
+      city: 'Paris'
     };
   },
-  render: function() {
-    var state = this.state;
+  render: function render() {
+    const state = this.state;
     return (state && state.edges) ?
       r(Map, {
         edges: state.edges,
@@ -56,6 +50,7 @@ var App = React.createClass({
         nodes: state.nodes,
         projection: state.projection,
         rendering: constants.SETTINGS.RENDERING,
+        voronoi: state.voroni,
         width: constants.SETTINGS.WIDTH,
         zoom: constants.SETTINGS.ZOOM
       }) : r.div('loading...');
